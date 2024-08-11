@@ -1,0 +1,75 @@
+import math
+# Define constants
+MAX_SMS_LENGTH = 200
+MAX_WORD_LENGTH = 20
+MAX_WORDS = 1000
+NUM_CLASSES = 2
+
+
+# Sample SMS dataset
+sms_data = [
+    {"text": "hello world money offer", "label": 1},  # Example spam SMS
+    {"text": "world amazing discount deal", "label": 0},
+    {"text": "Account verification","label": 1},
+    {"text": "password review","label": 0},
+    {"text": "your debit card is locked","label": 1},
+    {"text": "send us your review","label": 0},
+    # Add more SMS data as needed
+]
+# Function to tokenize SMS text
+def tokenize(sms):
+    return sms.split()
+# Function to train the Naive Bayes model
+def train(sms_data):
+    class_probabilities = [0] * NUM_CLASSES
+    word_given_class_probabilities = [[0] * NUM_CLASSES for _ in range(MAX_WORDS)]
+    class_counts = [0] * NUM_CLASSES
+    word_counts_per_class = [[0] * NUM_CLASSES for _ in range(MAX_WORDS)]
+    total_words_per_class = [0] * NUM_CLASSES
+    total_sms_per_class = [0] * NUM_CLASSES
+ # Calculate class counts and word counts per class
+    for sms in sms_data:
+        class_index = sms["label"]
+        total_sms_per_class[class_index] += 1
+        tokens = tokenize(sms["text"])
+        for token in tokens:
+            word_index = hash(token) % MAX_WORDS
+            word_counts_per_class[word_index][class_index] += 1
+            total_words_per_class[class_index] += 1
+
+    # Calculate class probabilities
+    for i in range(NUM_CLASSES):
+        class_probabilities[i] = total_sms_per_class[i] / len(sms_data)
+
+    # Calculate word given class probabilities
+    for i in range(MAX_WORDS):
+        for j in range(NUM_CLASSES):
+            word_given_class_probabilities[i][j] = (word_counts_per_class[i][j] + 1) / (total_words_per_class[j] + MAX_WORDS)
+
+    return class_probabilities, word_given_class_probabilities
+
+# Function to classify a new SMS
+def classify(sms, class_probabilities, word_given_class_probabilities):
+    tokens = tokenize(sms)
+    class_scores = [0] * NUM_CLASSES
+
+    # Calculate scores for each class
+    for i in range(NUM_CLASSES):
+        class_scores[i] = math.log(class_probabilities[i])
+        for token in tokens:
+            word_index = hash(token) % MAX_WORDS
+            class_scores[i] += math.log(word_given_class_probabilities[word_index][i])
+
+    # Determine the class with the highest score
+    return class_scores.index(max(class_scores))
+
+# Training
+class_probabilities, word_given_class_probabilities = train(sms_data)
+
+# Testing
+test_sms = input("Enter a new SMS: ")
+classification = classify(test_sms, class_probabilities, word_given_class_probabilities)
+if classification == 1:
+    print("This SMS is classified as spam.")
+else:
+    print("This SMS is classified as non-spam.")
